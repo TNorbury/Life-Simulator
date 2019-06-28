@@ -11,13 +11,12 @@ def generateWorld(w, h):
     world = [[0 for x in range(w)] for y in range(h)]
     # random.seed(69)
 
-    # Pick n spots (equal to 10% of total size) to place water and land starts
-    # 5% for water, 5% for land
-    numSpots = int((w * h) * 0.01);
-    # numSpots = 1
-    for i in range(numSpots):
-
+    # Water and land spots will start with a random number of nodes between 1
+    # and 10% of the total area of the map
+    for i in range(random.randint(1, int((w * h) * 0.01))):
         world = spawnNode(world, "w")
+
+    for i in range(random.randint(1, int((w * h) * 0.1))):
         world = spawnNode(world, "l")
 
     # Spawn a single desert tile
@@ -26,18 +25,18 @@ def generateWorld(w, h):
     # DEBUG -- Show the initial generation
     if DEBUG:
         displayWorld(world)
-        print ""
-        raw_input()
+        print("")
+        input()
 
-    xCoordinates = range(len(world[0]))
-    yCoordinates = range(len(world))
+    xCoordinates = list(range(len(world[0])))
+    yCoordinates = list(range(len(world)))
 
     # Now, go through all the spots and expand the land and water, until all spots are filled
     numEmptySpots = 1
 
     # We generate the map by determining what the next stage will look like, so we need to make a second
     # map of the same size as our "master" map
-    nextWorldStage = [[0 for y in range(w)] for x in range(h)]
+    nextWorldStage = [[0 for x in range(w)] for y in range(h)]
     while numEmptySpots > 0:
         numEmptySpots = 0
 
@@ -81,8 +80,8 @@ def generateWorld(w, h):
         # DEBUG -- Show the steps of generation
         if DEBUG and numEmptySpots > 0:
             displayWorld(world)
-            print ""
-            raw_input()
+            print("")
+            input()
 
     return world
 
@@ -106,13 +105,13 @@ def notOccupied(occupant):
 def displayWorld(world):
     # This is needed for colors to show up on windows command line, can be commented out
     # on Linux
-    os.system('color')
+    if (os.name=="nt"):
+        os.system('color')
     lineColor = '\033[0m'
 
     # Iterate over the world, display each tile
     for x in range(len(world)):
         for y in range(len(world[x])):
-            sqaureColor = ""
             square = world[x][y]
 
             # The colors work as follows:
@@ -123,19 +122,21 @@ def displayWorld(world):
 
             # Water will be blue, land will be green
             if square == "w":
-                print u'\u001b[48;5;26m' + " ",
+                print (u'\u001b[48;5;26m' + " ", end="")
             elif square == "l":
-                print u'\u001b[48;5;28m' + " ",
+                print (u'\u001b[48;5;28m' + " ", end="")
             # elif square == "s":
 
             else:
-                print lineColor + " ",
+                # This really only gets used in debug mode in order
+                # to display blank spaces
+                print (lineColor + " ", end="")
         
         # Reset the coloring
-        print lineColor
+        print(lineColor)
 
 def main():
-    world = generateWorld(100, 60)
+    world = generateWorld(75, 25)
     displayWorld(world)
 
 if __name__ == '__main__':
