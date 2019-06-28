@@ -22,28 +22,25 @@ def generateWorld(height, width):
             y = random.randint(0, height - 1)
 
             if notOccupied(world[x][y]):
+                world[x][y] = "w"
                 emptySpot = True
             
-            world[x][y] = "w"
-
         emptySpot = False
         while not emptySpot:
-
             # add a land spot
             x = random.randint(0, width - 1)
             y = random.randint(0, height - 1)
 
             if notOccupied(world[x][y]):
+                world[x][y] = "l"
                 emptySpot = True
             
-            world[x][y] = "l"
 
     xCoordinates = range(len(world))
     yCoordinates = range(len(world[0]))
 
     # Now, go through all the spots and expand the land and water, until all spots are filled
     numEmptySpots = 1
-
 
     # We generate the map by determining what the next stage will look like, so we need to make a second
     # map of the same size as our "master" map
@@ -53,9 +50,7 @@ def generateWorld(height, width):
 
         # shuffle the coordinates, giving a random priority for expansion 
         random.shuffle(xCoordinates)
-
         for x in xCoordinates:
-            
             random.shuffle(yCoordinates)
             for y in yCoordinates:
                 spotType = world[x][y]
@@ -86,10 +81,8 @@ def generateWorld(height, width):
                     # West
                     if (x - 1) >= 0 and notOccupied(nextWorldStage[x - 1][y]):
                         nextWorldStage[x - 1][y] = spotType
-                    
-                    # displayWorld(world)
-                    # print ""
 
+        # Copy the next stage and make it the current stage
         world = copy.copy(nextWorldStage)
 
         # DEBUG -- Show the steps of generation
@@ -102,7 +95,9 @@ def notOccupied(occupant):
     return occupant != "w" and occupant != "l"
 
 def displayWorld(world):
-    # os.system('color')
+    # This is needed for colors to show up on windows command line, can be commented out
+    # on Linux
+    os.system('color')
     lineColor = '\033[0m'
     # Print the top line
     # print lineColor + "_______________________________"
@@ -121,7 +116,6 @@ def displayWorld(world):
             else:
                 sqaureColor = '\033[0m'
 
-
             # print lineColor + "|",
             print sqaureColor + "X",
             
@@ -130,8 +124,8 @@ def displayWorld(world):
         print lineColor
 
 def main():
-    # world = generateWorld(50, 50)
-    world = generateWorld(100, 70)
+    world = generateWorld(50, 50)
+    # world = generateWorld(100, 70)
     displayWorld(world)
 
 
