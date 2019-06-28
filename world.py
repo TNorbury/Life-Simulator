@@ -170,8 +170,11 @@ class World:
             # Reset the coloring
             print(lineColor)
 
+
+# This main mostly exists for testing purposes, so that we can see if the world is
+# generate properly
 def main():
-    world = World(75, 25)
+    world = World(5, 5)
     world.generateWorld()
     world.displayWorld()
 
