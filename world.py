@@ -4,47 +4,40 @@ import copy
 
 # This "world" uses an X, Y coordinate system, with the origin in the uper left hand corner 
 
-def generateWorld(height, width):
+DEBUG = False
+
+def generateWorld(w, h):
     # Initialize the array
-    world = [[0 for y in range(height)] for x in range(width)]
+    world = [[0 for x in range(w)] for y in range(h)]
     # random.seed(69)
 
     # Pick n spots (equal to 10% of total size) to place water and land starts
     # 5% for water, 5% for land
-    numSpots = int((width * height) * 0.01);
-    # numSpots = 5
+    numSpots = int((w * h) * 0.01);
+    # numSpots = 1
     for i in range(numSpots):
-        emptySpot = False
 
-        while not emptySpot:
-            # add a water spot
-            x = random.randint(0, width - 1)
-            y = random.randint(0, height - 1)
+        world = spawnNode(world, "w")
+        world = spawnNode(world, "l")
 
-            if notOccupied(world[x][y]):
-                world[x][y] = "w"
-                emptySpot = True
-            
-        emptySpot = False
-        while not emptySpot:
-            # add a land spot
-            x = random.randint(0, width - 1)
-            y = random.randint(0, height - 1)
+    # Spawn a single desert tile
+    # world = spawnNode(world, "s")
 
-            if notOccupied(world[x][y]):
-                world[x][y] = "l"
-                emptySpot = True
-            
+    # DEBUG -- Show the initial generation
+    if DEBUG:
+        displayWorld(world)
+        print ""
+        raw_input()
 
-    xCoordinates = range(len(world))
-    yCoordinates = range(len(world[0]))
+    xCoordinates = range(len(world[0]))
+    yCoordinates = range(len(world))
 
     # Now, go through all the spots and expand the land and water, until all spots are filled
     numEmptySpots = 1
 
     # We generate the map by determining what the next stage will look like, so we need to make a second
     # map of the same size as our "master" map
-    nextWorldStage = [[0 for y in range(height)] for x in range(width)]
+    nextWorldStage = [[0 for y in range(w)] for x in range(h)]
     while numEmptySpots > 0:
         numEmptySpots = 0
 
@@ -53,7 +46,7 @@ def generateWorld(height, width):
         for x in xCoordinates:
             random.shuffle(yCoordinates)
             for y in yCoordinates:
-                spotType = world[x][y]
+                spotType = world[y][x]
 
                 # Count the number of empty spots
                 if notOccupied(spotType):
@@ -63,44 +56,58 @@ def generateWorld(height, width):
                 # No expanding pass the boundaries of the world
                 else:
                     # If this is an occupied space, then we'll set that in the next iteration
-                    nextWorldStage[x][y] = spotType
+                    nextWorldStage[y][x] = spotType
                     
                     # Along with setting the neighboring coordinates 
                     # North
-                    if (y - 1) >= 0 and notOccupied(nextWorldStage[x][y - 1]):
-                        nextWorldStage[x][y - 1] = spotType
+                    if (y - 1) >= 0 and notOccupied(nextWorldStage[y - 1][x]):
+                        nextWorldStage[y - 1][x] = spotType
                     
                     # East
-                    if (x + 1) < width and notOccupied(nextWorldStage[x + 1][y]):
-                        nextWorldStage[x + 1][y] = spotType
+                    if (x + 1) < w and notOccupied(nextWorldStage[y][x + 1]):
+                        nextWorldStage[y][x + 1] = spotType
                     
                     # South
-                    if (y + 1) < height and notOccupied(nextWorldStage[x][y + 1]):
-                        nextWorldStage[x][y + 1] = spotType
+                    if (y + 1) < h and notOccupied(nextWorldStage[y + 1][x]):
+                        nextWorldStage[y + 1][x] = spotType
 
                     # West
-                    if (x - 1) >= 0 and notOccupied(nextWorldStage[x - 1][y]):
-                        nextWorldStage[x - 1][y] = spotType
+                    if (x - 1) >= 0 and notOccupied(nextWorldStage[y][x - 1]):
+                        nextWorldStage[y][x - 1] = spotType
 
         # Copy the next stage and make it the current stage
-        world = copy.copy(nextWorldStage)
+        world = copy.deepcopy(nextWorldStage)
 
         # DEBUG -- Show the steps of generation
-        # displayWorld(world)
-        # print ""
+        if DEBUG and numEmptySpots > 0:
+            displayWorld(world)
+            print ""
+            raw_input()
 
     return world
 
+def spawnNode(world, nodeType):
+    emptySpot = False
+
+    while not emptySpot:
+        x = random.randint(0, len(world[0]) - 1)
+        y = random.randint(0, len(world) - 1)
+
+        if notOccupied(world[y][x]):
+            world[y][x] = nodeType
+            emptySpot = True
+
+    return world
+
+
 def notOccupied(occupant):
-    return occupant != "w" and occupant != "l"
+    return occupant == 0
 
 def displayWorld(world):
     # This is needed for colors to show up on windows command line, can be commented out
     # on Linux
     os.system('color')
     lineColor = '\033[0m'
-    # Print the top line
-    # print lineColor + "_______________________________"
 
     # Iterate over the world, display each tile
     for x in range(len(world)):
@@ -108,26 +115,28 @@ def displayWorld(world):
             sqaureColor = ""
             square = world[x][y]
 
+            # The colors work as follows:
+            # u'\u001b[38;5;Xm' -- Foreground (i.e. text) color
+            # u'\u001b[48;5;Xm' -- background color
+            # Where X is a value between 0 and 255 inclusive 
+            # Color List: https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
+
             # Water will be blue, land will be green
             if square == "w":
-                sqaureColor = '\033[94m'
+                print u'\u001b[48;5;26m' + " ",
             elif square == "l":
-                sqaureColor = '\033[92m'
-            else:
-                sqaureColor = '\033[0m'
+                print u'\u001b[48;5;28m' + " ",
+            # elif square == "s":
 
-            # print lineColor + "|",
-            print sqaureColor + "X",
-            
-        # Print the end bracket
-        # print lineColor + "|"
+            else:
+                print lineColor + " ",
+        
+        # Reset the coloring
         print lineColor
 
 def main():
-    world = generateWorld(50, 50)
-    # world = generateWorld(100, 70)
+    world = generateWorld(100, 60)
     displayWorld(world)
-
 
 if __name__ == '__main__':
     main()
