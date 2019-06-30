@@ -1,6 +1,11 @@
 import random
 import os
 import copy
+import math
+import sys
+
+# Importing packages from other parts of the project
+import creature.creature as p_creature
 
 DEBUG = False
 
@@ -10,9 +15,12 @@ class Node:
     # m_terrain -- the terrain of the node
     # m_occupant -- the occupant of the node
 
+    # Land "l" is the only valid type of land right now
+    VALID_LAND = {"l"}
+
     def __init__(self):
         self.m_terrain = ""
-        self.m_occupant = ""
+        self.m_occupant = 0
 
     def terrain(self):
         return self.m_terrain
@@ -23,11 +31,19 @@ class Node:
     def hasTerrain(self):
         return self.m_terrain != ""
 
+    def isLand(self):
+        # No terrain? Probably not land then
+        if (not self.hasTerrain()):
+            return False
+        
+        # Make sure the current terrain type is land
+        return self.m_terrain in self.VALID_LAND        
+
     def setOccupant(self, occupant):
         self.m_occupant = occupant
 
     def isOccupied(self):
-        return self.m_occupant != ""
+        return self.m_occupant != 0
 
     def toString(self):
         # The colors work as follows:
@@ -39,16 +55,29 @@ class Node:
         # This resets the terminal colors
         lineColor = '\033[0m'
 
+        terrainDisplay = ""
+        occupantDisplay = ""
+
         # Water will be blue, land will be green
         if self.m_terrain == "w":
-            return u'\u001b[48;5;26m' + " "
+            terrainDisplay = u'\u001b[48;5;26m'
         elif self.m_terrain == "l":
-            return u'\u001b[48;5;28m' + " "
+            terrainDisplay = u'\u001b[48;5;28m'
 
         else:
             # This really only gets used in debug mode in order
             # to display blank spaces
-            return lineColor + " "
+            terrainDisplay = lineColor
+
+        # The occupying creature will know how to display itself
+        if (self.isOccupied()):
+            occupantDisplay = self.m_occupant.toString()
+        
+        # If there is no occupant, then we'll just have an empty space
+        else:
+            occupantDisplay = " "
+
+        return terrainDisplay + occupantDisplay
     
 
 # This "world" uses an X, Y coordinate system, with the origin in the uper left hand corner 
@@ -57,30 +86,46 @@ class World:
     # m_width -- width of the world
     # m_height -- height of the world
     # m_world -- Array that holds the data of the world
+    # m_creatureRate -- Percentage (0%-100%) of land tiles that will have a creature spawn
+    #                   on it
+    # m_numLandTiles -- The number of land tiles in the world
 
-    # Constructor
-    def __init__(self, width, height):
-        self.m_width = width
-        self.m_height = height
-        
-        # initialize the array that houses the world
-        self.m_world = [[Node() for x in range(self.m_width)] for y in range(self.m_height)]
+    # The world will be a singleton, so it'll keep track of its instance
+    m_instance = None
 
-        # random.seed(69)
+    @staticmethod
+    def getInstance():
+        if World.m_instance != None:
+            return World.m_instance
+
+    # Constructor. 
+    # This will only be called by the simulation upon start up.
+    # Any other attempts to create a new world will cause an error
+    def __init__(self, width, height, creatureRate):
+        if World.m_instance != None:
+            raise Exception("The world already exists!")
+        else:
+            self.m_width = width
+            self.m_height = height
+            self.m_creatureRate = creatureRate
+
+            # initialize the array that houses the world
+            self.m_world = [[Node() for x in range(self.m_width)] for y in range(self.m_height)]
+
+            World.m_instance = self
+            # random.seed(10)
+
 
     # Procedurally generate the world map
     def generateWorld(self):
-
         # Water and land spots will start with a random number of nodes between 1
         # and 10% of the total area of the map
-        for _ in range(random.randint(1, int((self.m_width * self.m_height) * 0.1))):
+        for _ in range(random.randint(1, int(math.ceil((self.m_width * self.m_height) * 0.1)))):
             self.spawnNode("w")
 
-        for _ in range(random.randint(1, int((self.m_width * self.m_height) * 0.1))):
+        self.m_numLandTiles = random.randint(1, int(math.ceil((self.m_width * self.m_height) * 0.1)))
+        for _ in range(self.m_numLandTiles):
             self.spawnNode("l")
-
-        # Spawn a single desert tile
-        # world = spawnNode(world, "s")
 
         # DEBUG -- Show the initial generation
         if DEBUG:
@@ -88,6 +133,15 @@ class World:
             print("")
             input()
 
+        # Now that we have the initial terrain nodes laid out, start to propagate them until
+        # the world is filled
+        self.propagateTerrain()
+
+        # Now, spawn creatures in the world
+        self.spawnCreatures()
+
+
+    def propagateTerrain(self):
         xCoordinates = list(range(len(self.m_world[0])))
         yCoordinates = list(range(len(self.m_world)))
 
@@ -142,6 +196,26 @@ class World:
                 print("")
                 input()
 
+
+    def spawnCreatures(self):
+        # Firstly, we need to determine the number of creatures that will be on this map
+        numCreatures = math.ceil((self.m_creatureRate / 100) * self.m_numLandTiles)
+
+        # Now, spawn the number of creatures in the appropriate locations
+        for _ in range(numCreatures):
+            emptySpot = False
+
+            while not emptySpot:
+                x = random.randint(0, self.m_width - 1)
+                y = random.randint(0, self.m_height - 1)
+
+                # Find a spot that doesn't have an occupant yet and is land
+                if not self.m_world[y][x].isOccupied() and self.m_world[y][x].isLand():
+                    self.m_world[y][x].setOccupant(p_creature.Creature())
+                    # self.m_world[y][x].m_occupant.performTurn()
+                    emptySpot = True
+
+
     def spawnNode(self, nodeType):
         emptySpot = False
 
@@ -149,11 +223,62 @@ class World:
             x = random.randint(0, self.m_width - 1)
             y = random.randint(0, self.m_height - 1)
 
-            # if self.notOccupied(x, y):
             # Find a spot that doesn't have terrain yet
             if not self.m_world[y][x].hasTerrain():
                 self.m_world[y][x].setTerrain(nodeType)
                 emptySpot = True
+
+
+    def findCreature(self, creature):
+        # Search the map for a given creature
+        for x in range(self.m_width):
+            for y in range(self.m_height):
+                if self.m_world[y][x].m_occupant == creature:
+                    return x, y
+        
+        return -1, -1
+
+    # Simulate a single turn on this world
+    def performTurn(self):
+        # Go through all the nodes and have them perform a turn
+        for x in range(self.m_width):
+            for y in range(self.m_height):
+                if self.m_world[y][x].isOccupied():
+                    self.m_world[y][x].m_occupant.performTurn()
+
+        # Now that all the turns have be performed, tell
+        # all the creatures that they can perform a turn again
+        for x in range(self.m_width):
+            for y in range(self.m_height):
+                if self.m_world[y][x].isOccupied():
+                    self.m_world[y][x].m_occupant.dayOver()
+
+    def inBounds(self, x, y):
+        if x < 0 or x >= self.m_width or y < 0 or y >= self.m_height:
+            return False
+        return True
+        
+    def validMove(self, x, y):
+        # boundary check
+        if not self.inBounds(x, y):
+            return False
+        
+        return self.m_world[y][x].isLand() and not self.m_world[y][x].isOccupied()
+
+    def moveOccupant(self, oldX, oldY, newX, newY):
+        # Do a boundary check first 
+        if not self.inBounds(oldX, oldY) or not self.inBounds(newX, newY):
+
+            # TEST CODE REMOVE LATER, if the boundary is reached, kill the occupant
+            self.m_world[oldY][oldX].setOccupant(0)
+
+            return
+        # Firstly, set the occupant at its new location
+        self.m_world[newY][newX].setOccupant(self.m_world[oldY][oldX].m_occupant)
+
+        # Then remove it from its old location
+        self.m_world[oldY][oldX].setOccupant(0)
+
 
     def displayWorld(self):
         # This is needed for colors to show up on windows command line, can be commented out
@@ -169,12 +294,14 @@ class World:
             
             # Reset the coloring
             print(lineColor)
+        print("")
+            
 
 
 # This main mostly exists for testing purposes, so that we can see if the world is
 # generate properly
 def main():
-    world = World(5, 5)
+    world = World(5, 5, 50)
     world.generateWorld()
     world.displayWorld()
 
