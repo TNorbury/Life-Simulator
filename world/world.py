@@ -142,8 +142,8 @@ class World:
 
 
     def propagateTerrain(self):
-        xCoordinates = list(range(len(self.m_world[0])))
-        yCoordinates = list(range(len(self.m_world)))
+        xCoordinates = list(range(self.m_width))
+        yCoordinates = list(range(self.m_height))
 
         # Now, go through all the spots and expand the land and water, until all spots are filled
         numEmptySpots = 1
@@ -240,9 +240,14 @@ class World:
 
     # Simulate a single turn on this world
     def performTurn(self):
-        # Go through all the nodes and have them perform a turn
-        for x in range(self.m_width):
-            for y in range(self.m_height):
+        xCoordinates = list(range(self.m_width))
+        yCoordinates = list(range(self.m_height))
+            
+        # Go through all the nodes in a random order and have them perform a turn
+        random.shuffle(xCoordinates)
+        for x in xCoordinates:
+            random.shuffle(yCoordinates)
+            for y in yCoordinates:
                 if self.m_world[y][x].isOccupied():
                     self.m_world[y][x].m_occupant.performTurn()
 
