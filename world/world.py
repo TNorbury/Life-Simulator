@@ -253,10 +253,16 @@ class World:
 
         # Now that all the turns have be performed, tell
         # all the creatures that they can perform a turn again
+        livingCreautres = False
         for x in range(self.m_width):
             for y in range(self.m_height):
                 if self.m_world[y][x].isOccupied():
                     self.m_world[y][x].m_occupant.dayOver()
+
+                    # There is still something living out there
+                    livingCreautres = True
+        
+        return livingCreautres
 
     def inBounds(self, x, y):
         if x < 0 or x >= self.m_width or y < 0 or y >= self.m_height:
@@ -278,11 +284,16 @@ class World:
             self.m_world[oldY][oldX].setOccupant(0)
 
             return
+
         # Firstly, set the occupant at its new location
         self.m_world[newY][newX].setOccupant(self.m_world[oldY][oldX].m_occupant)
 
         # Then remove it from its old location
-        self.m_world[oldY][oldX].setOccupant(0)
+        self.removeOccupant(oldX, oldY)
+
+
+    def removeOccupant(self, x, y):
+        self.m_world[y][x].m_occupant = 0
 
 
     def displayWorld(self):

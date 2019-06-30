@@ -24,10 +24,13 @@ def main():
     world.generateWorld()
     world.displayWorld()
     while True:
-        world.performTurn()
+        # Nothing is left alive, display the world one more time and then exit
+        if not world.performTurn():
+            world.displayWorld()
+            exit()
         world.displayWorld()
         time.sleep(.5)
-        # input()
+        input()
 
 if __name__ == '__main__':
     main()
