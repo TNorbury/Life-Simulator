@@ -37,7 +37,11 @@ class Node:
             return False
         
         # Make sure the current terrain type is land
-        return self.m_terrain in self.VALID_LAND        
+        return self.m_terrain in self.VALID_LAND  
+
+    def isWater(self):
+        # If it's not land then it's water
+        return not self.isLand()      
 
     def setOccupant(self, occupant):
         self.m_occupant = occupant
@@ -276,6 +280,13 @@ class World:
         
         return self.m_world[y][x].isLand() and not self.m_world[y][x].isOccupied()
 
+    def isWater(self, x, y):
+        # boundary check
+        if not self.inBounds(x, y):
+            return False
+
+        return self.m_world[y][x].isWater()
+
     def moveOccupant(self, oldX, oldY, newX, newY):
         # Do a boundary check first 
         if not self.inBounds(oldX, oldY) or not self.inBounds(newX, newY):
@@ -293,18 +304,24 @@ class World:
 
 
     def removeOccupant(self, x, y):
-        self.m_world[y][x].m_occupant = 0
-
+        if (self.inBounds(x, y)):
+            self.m_world[y][x].m_occupant = 0
 
     def displayWorld(self):
-        # This is needed for colors to show up on windows command line, can be commented out
-        # on Linux
+        # This is needed for colors to show up on windows command line
         if (os.name=="nt"):
             os.system('color')
         lineColor = '\033[0m'
 
+        # Print the horizontal coordinates
+        print(" ", end="")
+        for x in range(len(self.m_world[0])):
+            print(x % 10, end="")
+        print("")
+
         # Iterate over the world, display each tile
         for x in range(len(self.m_world)):
+            print(x % 10, end="")
             for y in range(len(self.m_world[x])):
                 print(self.m_world[x][y].toString(), end="")
             
