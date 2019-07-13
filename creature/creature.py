@@ -107,9 +107,9 @@ class Creature:
 
     # Returns a string that can be pretented to represent this creature
     def toString(self):
-        creatureColor = u'\u001b[38;5;178m'
+        creatureColor = "#d1c115"
 
         # If the creature is thristy, display it as a red X
         if (self.m_thirst < self.m_thirstThreshold):
-            creatureColor = u'\u001b[38;5;196m'
-        return creatureColor + "X"
+            creatureColor = "#d11515"
+        return creatureColor

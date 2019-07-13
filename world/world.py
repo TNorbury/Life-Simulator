@@ -3,6 +3,7 @@ import os
 import copy
 import math
 import sys
+import tkinter
 
 # Importing packages from other parts of the project
 import creature.creature as p_creature
@@ -14,6 +15,7 @@ class Node:
     # Node Attributes
     # m_terrain -- the terrain of the node
     # m_occupant -- the occupant of the node
+    # m_update -- flag indicating if this node needs to be redrawn
 
     # Land "l" is the only valid type of land right now
     VALID_LAND = {"l"}
@@ -21,13 +23,15 @@ class Node:
     def __init__(self):
         self.m_terrain = ""
         self.m_occupant = 0
+        self.m_update = True
 
     def terrain(self):
         return self.m_terrain
 
     def setTerrain(self, terrain):
         self.m_terrain = terrain
-
+        self.m_update = True
+        
     def hasTerrain(self):
         return self.m_terrain != ""
 
@@ -45,9 +49,13 @@ class Node:
 
     def setOccupant(self, occupant):
         self.m_occupant = occupant
+        self.m_update = True
 
     def isOccupied(self):
         return self.m_occupant != 0
+
+    def needsRedrawn(self):
+        return self.m_update
 
     def toString(self):
         # The colors work as follows:
@@ -57,31 +65,35 @@ class Node:
         # Color List: https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
 
         # This resets the terminal colors
-        lineColor = '\033[0m'
+        lineColor = '#FFFFFF'
 
-        terrainDisplay = ""
-        occupantDisplay = ""
+        terrainColor = ""
+        occupantColor = "#000000"
+        occupant = "X"
 
         # Water will be blue, land will be green
         if self.m_terrain == "w":
-            terrainDisplay = u'\u001b[48;5;26m'
+            terrainColor = "#297bff"
         elif self.m_terrain == "l":
-            terrainDisplay = u'\u001b[48;5;28m'
+            terrainColor = "#1c8a16"
 
         else:
             # This really only gets used in debug mode in order
             # to display blank spaces
-            terrainDisplay = lineColor
+            terrainColor = lineColor
 
         # The occupying creature will know how to display itself
         if (self.isOccupied()):
-            occupantDisplay = self.m_occupant.toString()
+            occupantColor = self.m_occupant.toString()
         
-        # If there is no occupant, then we'll just have an empty space
+        # If there is no occupant, the color will match the terrain
         else:
-            occupantDisplay = " "
+            occupantColor = terrainColor
 
-        return terrainDisplay + occupantDisplay
+        # This node is in the process of being redrawn, so unset this flag
+        self.m_update = False
+
+        return terrainColor, occupantColor, occupant
     
 
 # This "world" uses an X, Y coordinate system, with the origin in the uper left hand corner 
@@ -93,6 +105,7 @@ class World:
     # m_creatureRate -- Percentage (0%-100%) of land tiles that will have a creature spawn
     #                   on it
     # m_numLandTiles -- The number of land tiles in the world
+    # m_window -- The gui where this will be displayed
 
     # The world will be a singleton, so it'll keep track of its instance
     m_instance = None
@@ -105,7 +118,7 @@ class World:
     # Constructor. 
     # This will only be called by the simulation upon start up.
     # Any other attempts to create a new world will cause an error
-    def __init__(self, width, height, creatureRate):
+    def __init__(self, width, height, creatureRate, window):
         if World.m_instance != None:
             raise Exception("The world already exists!")
         else:
@@ -115,6 +128,8 @@ class World:
 
             # initialize the array that houses the world
             self.m_world = [[Node() for x in range(self.m_width)] for y in range(self.m_height)]
+
+            self.m_window = window
 
             World.m_instance = self
             # random.seed(10)
@@ -305,39 +320,30 @@ class World:
 
     def removeOccupant(self, x, y):
         if (self.inBounds(x, y)):
-            self.m_world[y][x].m_occupant = 0
+            self.m_world[y][x].setOccupant(0)
 
     def displayWorld(self):
-        # This is needed for colors to show up on windows command line
-        if (os.name=="nt"):
-            os.system('color')
-        lineColor = '\033[0m'
-
-        # Print the horizontal coordinates
-        print(" ", end="")
-        for x in range(len(self.m_world[0])):
-            print(x % 10, end="")
-        print("")
-
         # Iterate over the world, display each tile
         for x in range(len(self.m_world)):
-            print(x % 10, end="")
+            # print(x % 10, end="")
             for y in range(len(self.m_world[x])):
-                print(self.m_world[x][y].toString(), end="")
+                # For the sake of performance, we'll only update the squares that need to be redrawn
+                if (self.m_world[x][y].needsRedrawn()):
+                    terrainColor, occupantColor, occupant = self.m_world[x][y].toString()
+                    tkinter.Label(self.m_window, text=occupant, background=terrainColor, foreground=occupantColor, borderwidth=0).grid(row=x, column=y)
+
+        # Tell the window to update/redraw itself once we've updated all the labels
+        self.m_window.update()
             
-            # Reset the coloring
-            print(lineColor)
-        print("")
-            
 
 
-# This main mostly exists for testing purposes, so that we can see if the world is
-# generate properly
-def main():
-    world = World(5, 5, 50)
-    world.generateWorld()
-    world.displayWorld()
+# # This main mostly exists for testing purposes, so that we can see if the world is
+# # generate properly
+# def main():
+#     world = World(5, 5, 50)
+#     world.generateWorld()
+#     world.displayWorld()
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
